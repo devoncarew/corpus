@@ -1,6 +1,6 @@
 name: corpus
 # or corpus_analyze?
-description: This is a tool to calculate the API usage for a package.
+description: A tool to calculate the API usage for a package.
 version: 0.1.0
 publish_to: none
 
