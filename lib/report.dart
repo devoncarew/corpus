@@ -34,18 +34,21 @@ class Report {
     var packagesReferences = usage.referringPackages;
     var libraryReferences = usage.referringLibraries;
 
+    // TODO(devoncarew): write a utility class to construct markdown tables;
+    // that could then include automatic whitespace padding for cells
+
     // Library references
     buf.writeln();
     buf.writeln('## Library references');
     buf.writeln();
     buf.writeln('### Library references from packages');
     buf.writeln();
+    buf.writeln('| Library | Package references | % |');
+    buf.writeln('| --- | ---: | ---: |');
     for (var entry in packagesReferences.sortedLibraryReferences.entries) {
       var val = entry.value;
       var count = usage.corpusPackages.length;
-      var references = pluralize(val, 'reference');
-      buf.writeln(
-          '- ${entry.key} - $val package $references (${percent(val, count)})');
+      buf.writeln('| ${entry.key} | $val | ${percent(val, count)} |');
       var library = entry.key;
       if (showSrcReferences && library.contains('/src/')) {
         for (var entity in packagesReferences.getLibraryReferences(entry.key)) {
@@ -56,12 +59,12 @@ class Report {
     buf.writeln();
     buf.writeln('### Library references from libraries');
     buf.writeln();
+    buf.writeln('| Library | Library references | % |');
+    buf.writeln('| --- | ---: | ---: |');
     for (var entry in libraryReferences.sortedLibraryReferences.entries) {
       var val = entry.value;
       var count = libraryReferences.entityCount;
-      var references = pluralize(val, 'reference');
-      buf.writeln(
-          '- ${entry.key} - $val library $references (${percent(val, count)})');
+      buf.writeln('| ${entry.key} | $val | ${percent(val, count)} |');
       var library = entry.key;
       if (showSrcReferences && library.contains('/src/')) {
         for (var entity in libraryReferences.getLibraryReferences(entry.key)) {
@@ -76,22 +79,22 @@ class Report {
     buf.writeln();
     buf.writeln('### Class references from packages');
     buf.writeln();
+    buf.writeln('| Class | Package references | % |');
+    buf.writeln('| --- | ---: | ---: |');
     for (var entry in packagesReferences.sortedClassReferences.entries) {
       var val = entry.value;
       var count = usage.corpusPackages.length;
-      var references = pluralize(val, 'reference');
-      buf.writeln(
-          '- ${entry.key} - $val package $references (${percent(val, count)})');
+      buf.writeln('| ${entry.key} | $val | ${percent(val, count)} |');
     }
     buf.writeln();
     buf.writeln('### Class references from libraries');
     buf.writeln();
+    buf.writeln('| Class | Library references | % |');
+    buf.writeln('| --- | ---: | ---: |');
     for (var entry in libraryReferences.sortedClassReferences.entries) {
       var val = entry.value;
       var count = libraryReferences.entityCount;
-      var references = pluralize(val, 'reference');
-      buf.writeln(
-          '- ${entry.key} - $val library $references (${percent(val, count)})');
+      buf.writeln('| ${entry.key} | $val | ${percent(val, count)} ');
     }
 
     // Top-level symbols
@@ -102,22 +105,22 @@ class Report {
       buf.writeln();
       buf.writeln('### Top-level symbols references from packages');
       buf.writeln();
+      buf.writeln('| Top-level symbol | Package references | % |');
+      buf.writeln('| --- | ---: | ---: |');
       for (var entry in packagesReferences.sortedTopLevelReferences.entries) {
         var val = entry.value;
         var count = usage.corpusPackages.length;
-        var references = pluralize(val, 'reference');
-        buf.writeln(
-            '- ${entry.key} - $val package $references (${percent(val, count)})');
+        buf.writeln('| ${entry.key} | $val | ${percent(val, count)} |');
       }
       buf.writeln();
       buf.writeln('### Top-level symbol references from libraries');
       buf.writeln();
+      buf.writeln('| Top-level symbol | Library references | % |');
+      buf.writeln('| --- | ---: | ---: |');
       for (var entry in libraryReferences.sortedTopLevelReferences.entries) {
         var val = entry.value;
         var count = libraryReferences.entityCount;
-        var references = pluralize(val, 'reference');
-        buf.writeln(
-            '- ${entry.key} - $val library $references (${percent(val, count)})');
+        buf.writeln('| ${entry.key} | $val | ${percent(val, count)} ');
       }
     }
 

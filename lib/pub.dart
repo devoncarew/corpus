@@ -31,7 +31,6 @@ class Pub {
   }
 
   Future<PackageInfo> getPackageInfo(String pkgName) async {
-    //final PackageOptions options = await _getPackageOptions(pkgName);
     final json = await _getJson(Uri.https('pub.dev', 'api/packages/$pkgName'));
 
     return PackageInfo.from(json /*, options: options*/);

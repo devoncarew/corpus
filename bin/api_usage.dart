@@ -44,14 +44,14 @@ void main(List<String> args) async {
 
   var targetPackage = await pub.getPackageInfo(packageName);
 
+  final dateOneYearAgo = DateTime.now().subtract(Duration(days: 365));
+
   var packages = await pub.popularDependenciesOf(
     packageName,
     limit: packageLimit == null ? null : int.parse(packageLimit),
     filter: (PackageInfo packageInfo) {
       // Only use packages which have been updated in the last year.
-      return packageInfo.publishedDate.isAfter(
-        DateTime.now().subtract(Duration(days: 365)),
-      );
+      return packageInfo.publishedDate.isAfter(dateOneYearAgo);
     },
   );
 
