@@ -1,4 +1,4 @@
-[![Dart CI](https://github.com/devoncarew/corpus/actions/workflows/build.yaml/badge.svg)](https://github.com/devoncarew/corpus/actions/workflows/build.yaml)
+[![Dart](https://github.com/devoncarew/corpus/actions/workflows/dart.yml/badge.svg)](https://github.com/devoncarew/corpus/actions/workflows/dart.yml)
 
 ## What's this?
 
