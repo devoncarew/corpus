@@ -5,6 +5,7 @@ import 'package:cli_util/cli_logging.dart';
 import 'package:http/http.dart';
 import 'package:http/retry.dart';
 import 'package:path/path.dart' as path;
+import 'package:yaml/yaml.dart' as yaml;
 
 import 'cache.dart';
 import 'pub.dart';
@@ -119,9 +120,20 @@ class LocalPackage {
       }
     }
 
-    final progress = logger?.progress('pub get');
+    var executable = Platform.resolvedExecutable;
+
+    // Use 'flutter pub get' for flutter packages; it seems to do a better job
+    // than 'dart pub get' for some reason.
+    if (flutterPackage) {
+      var flutterExecutable = path.join(path.dirname(executable), 'flutter');
+      if (File(flutterExecutable).existsSync()) {
+        executable = flutterExecutable;
+      }
+    }
+
+    final progress = logger?.progress('${path.basename(executable)} pub get');
     var result = await runProcess(
-      Platform.resolvedExecutable,
+      executable,
       [
         'pub',
         'get',
@@ -132,5 +144,25 @@ class LocalPackage {
     progress?.finish(showTiming: true);
 
     return result.exitCode == 0;
+  }
+
+  bool get flutterPackage {
+    // Look for:
+
+    // environment:
+    //   flutter: ">=2.5.0"
+
+    var pubspecFile = File(path.join(directory.path, 'pubspec.yaml'));
+    if (!pubspecFile.existsSync()) {
+      return false;
+    }
+
+    var pubspec = yaml.loadYaml(pubspecFile.readAsStringSync()) as Map;
+    if (pubspec.containsKey('environment')) {
+      var env = pubspec['environment'] as Map;
+      return env.containsKey('flutter');
+    }
+
+    return false;
   }
 }
