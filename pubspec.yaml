@@ -16,6 +16,7 @@ dependencies:
   surveyor:
     git:
       url: https://github.com/pq/surveyor
+  yaml: ^3.0.0
 
 dev_dependencies:
   checks:

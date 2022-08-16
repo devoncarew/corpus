@@ -313,6 +313,11 @@ class References {
   Map<String, int> get sortedTopLevelReferences =>
       _topLevelReferences.sortedReferences;
 
+  List<Entity> getReferencesToClass(String className) {
+    var refs = _classReferences.referencesTo(className);
+    return refs == null ? [] : refs.toList();
+  }
+
   void combineWith(References references) {
     _libraryReferences.combineWith(references._libraryReferences);
     _classReferences.combineWith(references._classReferences);
@@ -352,6 +357,10 @@ class EntityReferences {
     List<String> keys = refs.keys.toList();
     keys.sort((a, b) => refs[b]!.length - refs[a]!.length);
     return Map.fromIterable(keys, value: (key) => refs[key]!.length);
+  }
+
+  Set<Entity>? referencesTo(String className) {
+    return _references[className];
   }
 
   void combineWith(EntityReferences other) {

@@ -32,6 +32,8 @@ Some available options are:
   directory (something that's generally not intended to be part of a package's
   public API), this option will include which package is using the `src/`
   library in the output
+- `--include-old`: Include packages that haven't been published in the last
+  year (these are normally excluded).
 
 ```
 usage: dart bin/api_usage.dart [options] <package-name>

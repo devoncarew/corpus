@@ -86,6 +86,17 @@ class Report {
       var count = usage.corpusPackages.length;
       buf.writeln('| ${entry.key} | $val | ${percent(val, count)} |');
     }
+
+    // // TODO: convert this into a command-line option
+    // final searchClass = 'Foo';
+    // var classRefs = packagesReferences.getReferencesToClass(searchClass);
+    // if (classRefs.isNotEmpty) {
+    //   print('Found references to $searchClass:');
+    //   for (var ref in classRefs) {
+    //     print('- $ref');
+    //   }
+    // }
+
     buf.writeln();
     buf.writeln('### Class references from libraries');
     buf.writeln();
