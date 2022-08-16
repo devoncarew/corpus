@@ -31,6 +31,7 @@ void main(List<String> args) async {
   final packageName = argResults.rest.first;
   String? packageLimit = argResults['package-limit'];
   bool showSrcReferences = argResults['show-src-references'] as bool;
+  bool includeOld = argResults['include-old'] as bool;
 
   var log = Logger.standard();
 
@@ -45,14 +46,17 @@ void main(List<String> args) async {
   var targetPackage = await pub.getPackageInfo(packageName);
 
   final dateOneYearAgo = DateTime.now().subtract(Duration(days: 365));
+  bool packageAgeFilter(PackageInfo packageInfo) {
+    // todo: print to stdout when filtered a package
+
+    // Only use packages which have been updated in the last year.
+    return packageInfo.publishedDate.isAfter(dateOneYearAgo);
+  }
 
   var packages = await pub.popularDependenciesOf(
     packageName,
     limit: packageLimit == null ? null : int.parse(packageLimit),
-    filter: (PackageInfo packageInfo) {
-      // Only use packages which have been updated in the last year.
-      return packageInfo.publishedDate.isAfter(dateOneYearAgo);
-    },
+    filter: includeOld ? null : packageAgeFilter,
   );
 
   progress.finish(message: 'found ${packages.length} packages');
@@ -117,6 +121,12 @@ ArgParser createArgParser() {
     'show-src-references',
     negatable: false,
     help: 'Report specific references to src/ libraries.',
+  );
+  parser.addFlag(
+    'include-old',
+    negatable: false,
+    help: 'Include packages that haven\'t been published in the last year '
+        '(these are normally excluded).',
   );
   return parser;
 }
