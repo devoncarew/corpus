@@ -105,7 +105,35 @@ class Report {
     for (var entry in libraryReferences.sortedClassReferences.entries) {
       var val = entry.value;
       var count = libraryReferences.entityCount;
-      buf.writeln('| ${entry.key} | $val | ${percent(val, count)} ');
+      buf.writeln('| ${entry.key} | $val | ${percent(val, count)} |');
+    }
+
+    // Extension references
+    if (packagesReferences.sortedExtensionReferences.isNotEmpty ||
+        libraryReferences.sortedExtensionReferences.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('## Extension references');
+      buf.writeln();
+      buf.writeln('### Extension references from packages');
+      buf.writeln();
+      buf.writeln('| Extension | Package references | % |');
+      buf.writeln('| --- | ---: | ---: |');
+      for (var entry in packagesReferences.sortedExtensionReferences.entries) {
+        var val = entry.value;
+        var count = usage.corpusPackages.length;
+        buf.writeln('| ${entry.key} | $val | ${percent(val, count)} |');
+      }
+
+      buf.writeln();
+      buf.writeln('### Extension references from libraries');
+      buf.writeln();
+      buf.writeln('| Extension | Library references | % |');
+      buf.writeln('| --- | ---: | ---: |');
+      for (var entry in libraryReferences.sortedExtensionReferences.entries) {
+        var val = entry.value;
+        var count = libraryReferences.entityCount;
+        buf.writeln('| ${entry.key} | $val | ${percent(val, count)} |');
+      }
     }
 
     // Top-level symbols
@@ -131,7 +159,7 @@ class Report {
       for (var entry in libraryReferences.sortedTopLevelReferences.entries) {
         var val = entry.value;
         var count = libraryReferences.entityCount;
-        buf.writeln('| ${entry.key} | $val | ${percent(val, count)} ');
+        buf.writeln('| ${entry.key} | $val | ${percent(val, count)} |');
       }
     }
 

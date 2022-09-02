@@ -13,8 +13,6 @@ import 'package:surveyor/src/visitors.dart';
 import 'pub.dart';
 import 'utils.dart';
 
-// todo: report extension method usage
-
 class ApiUsage {
   final PackageInfo package;
 
@@ -58,9 +56,11 @@ class ApiUsage {
   String describeUsage() {
     int libraryCount = fromPackages.sortedLibraryReferences.length;
     int classCount = fromPackages.sortedClassReferences.length;
+    int extensionCount = fromPackages.sortedExtensionReferences.length;
     int symbolCount = fromPackages.sortedTopLevelReferences.length;
     return 'referenced $libraryCount ${pluralize(libraryCount, 'library', plural: 'libraries')}, '
         '$classCount ${pluralize(classCount, 'class', plural: 'classes')}, '
+        '$extensionCount ${pluralize(extensionCount, 'extension')}, '
         'and $symbolCount top-level ${pluralize(symbolCount, 'symbol')}';
   }
 
@@ -93,25 +93,25 @@ class CollectedApiUsage {
 
 class ApiUseCollector extends RecursiveAstVisitor implements AstContext {
   final PackageInfo targetPackage;
-  final PackageInfo usingPackage;
-  final Directory usingPackageDir;
-  late PackageEntity usingPackageEntity;
+  final PackageInfo packageInfo;
+  final Directory packageDir;
+
+  final PackageEntity packageEntity;
 
   References referringPackages = References();
   References referringLibraries = References();
 
   String? _currentFilePath;
 
-  ApiUseCollector(this.targetPackage, this.usingPackage, this.usingPackageDir) {
-    usingPackageEntity = PackageEntity(usingPackage.name);
-  }
+  ApiUseCollector(this.targetPackage, this.packageInfo, this.packageDir)
+      : packageEntity = PackageEntity(packageInfo.name);
 
   String get targetName => targetPackage.name;
 
   ApiUsage get usage =>
-      ApiUsage(usingPackage, referringPackages, referringLibraries);
+      ApiUsage(packageInfo, referringPackages, referringLibraries);
 
-  String get currentPackage => usage.package.name;
+  String get packageName => usage.package.name;
 
   @override
   void setFilePath(String filePath) {
@@ -127,11 +127,11 @@ class ApiUseCollector extends RecursiveAstVisitor implements AstContext {
 
     if (uri != null && uri.startsWith('package:')) {
       if (uri.startsWith('package:$targetName/')) {
-        referringPackages.addLibraryReference(uri, usingPackageEntity);
+        referringPackages.addLibraryReference(uri, packageEntity);
         var relativeLibraryPath =
-            path.relative(_currentFilePath!, from: usingPackageDir.path);
+            path.relative(_currentFilePath!, from: packageDir.path);
         referringLibraries.addLibraryReference(
-            uri, LibraryEntity(currentPackage, relativeLibraryPath));
+            uri, LibraryEntity(packageName, relativeLibraryPath));
       }
     }
 
@@ -150,36 +150,71 @@ class ApiUseCollector extends RecursiveAstVisitor implements AstContext {
     super.visitSimpleIdentifier(node);
 
     var element = node.staticElement;
-    if (element != null && element.kind == ElementKind.GETTER) {
-      // We only want library getters.
-      if (element.enclosingElement!.kind != ElementKind.COMPILATION_UNIT) {
-        return;
-      }
+    if (element == null) {
+      return;
+    }
 
-      var library = element.library;
-      if (library == null || library.isInSdk) {
-        return;
-      }
+    var library = element.library;
+    if (library == null || library.isInSdk) {
+      return;
+    }
 
-      var libraryUri = library.librarySource.uri;
-      if (libraryUri.scheme == 'package' &&
-          libraryUri.pathSegments.first == targetName) {
-        referringPackages.addTopLevelReference(
-            element.name!, usingPackageEntity);
-        var relativeLibraryPath =
-            path.relative(_currentFilePath!, from: usingPackageDir.path);
+    var libraryUri = library.librarySource.uri;
+    if (libraryUri.scheme != 'package' ||
+        libraryUri.pathSegments.first != targetName) {
+      return;
+    }
+
+    var enclosingElement = element.enclosingElement!;
+
+    if (enclosingElement.kind == ElementKind.CLASS) {
+      final name = enclosingElement.name!;
+      referringPackages.addClassReference(name, packageEntity);
+      var relPath = path.relative(_currentFilePath!, from: packageDir.path);
+      referringLibraries.addClassReference(
+          name, LibraryEntity(packageName, relPath));
+    } else if (enclosingElement.kind == ElementKind.EXTENSION) {
+      final name = enclosingElement.name!;
+      referringPackages.addExtensionReference(name, packageEntity);
+      var relPath = path.relative(_currentFilePath!, from: packageDir.path);
+      referringLibraries.addExtensionReference(
+          name, LibraryEntity(packageName, relPath));
+    }
+
+    if (element.kind == ElementKind.GETTER) {
+      if (enclosingElement.kind == ElementKind.COMPILATION_UNIT) {
+        // Record top-level elements.
+        final name = element.name!;
+        referringPackages.addTopLevelReference(name, packageEntity);
+        var relPath = path.relative(_currentFilePath!, from: packageDir.path);
         referringLibraries.addTopLevelReference(
-            element.name!, LibraryEntity(currentPackage, relativeLibraryPath));
+            name, LibraryEntity(packageName, relPath));
+      } else if (enclosingElement.kind == ElementKind.EXTENSION) {
+        // Record extensions.
+        final name = enclosingElement.name!;
+        referringPackages.addExtensionReference(name, packageEntity);
+        var relPath = path.relative(_currentFilePath!, from: packageDir.path);
+        referringLibraries.addExtensionReference(
+            name, LibraryEntity(packageName, relPath));
+      }
+    } else if (element.kind == ElementKind.FUNCTION) {
+      if (enclosingElement.kind == ElementKind.COMPILATION_UNIT) {
+        // Record top-level elements.
+        final name = element.name!;
+        referringPackages.addTopLevelReference(name, packageEntity);
+        var relPath = path.relative(_currentFilePath!, from: packageDir.path);
+        referringLibraries.addTopLevelReference(
+            name, LibraryEntity(packageName, relPath));
+      } else if (enclosingElement.kind == ElementKind.EXTENSION) {
+        // Record extensions.
+        final name = enclosingElement.name!;
+        referringPackages.addExtensionReference(name, packageEntity);
+        var relPath = path.relative(_currentFilePath!, from: packageDir.path);
+        referringLibraries.addExtensionReference(
+            name, LibraryEntity(packageName, relPath));
       }
     }
   }
-
-  // @override
-  // visitMethodInvocation(MethodInvocation node) {
-  //   return super.visitMethodInvocation(node);
-
-  //   // todo:
-  // }
 
   void _handleType(DartType? type) {
     var element = type?.element;
@@ -192,11 +227,11 @@ class ApiUseCollector extends RecursiveAstVisitor implements AstContext {
       var libraryUri = library.librarySource.uri;
       if (libraryUri.scheme == 'package' &&
           libraryUri.pathSegments.first == targetName) {
-        referringPackages.addClassReference(element.name!, usingPackageEntity);
-        var relativeLibraryPath =
-            path.relative(_currentFilePath!, from: usingPackageDir.path);
+        final name = element.name!;
+        referringPackages.addClassReference(name, packageEntity);
+        var relPath = path.relative(_currentFilePath!, from: packageDir.path);
         referringLibraries.addClassReference(
-            element.name!, LibraryEntity(currentPackage, relativeLibraryPath));
+            name, LibraryEntity(packageName, relPath));
       }
     }
   }
@@ -262,6 +297,7 @@ class LibraryEntity extends Entity {
 class References {
   final EntityReferences _libraryReferences = EntityReferences();
   final EntityReferences _classReferences = EntityReferences();
+  final EntityReferences _extensionReferences = EntityReferences();
   final EntityReferences _topLevelReferences = EntityReferences();
 
   References();
@@ -271,6 +307,7 @@ class References {
 
     refs._libraryReferences.fromJson(json['library']);
     refs._classReferences.fromJson(json['class']);
+    refs._extensionReferences.fromJson(json['extension']);
     refs._topLevelReferences.fromJson(json['topLevel']);
 
     return refs;
@@ -281,6 +318,7 @@ class References {
 
     result.addAll(_libraryReferences.entities);
     result.addAll(_classReferences.entities);
+    result.addAll(_extensionReferences.entities);
     result.addAll(_topLevelReferences.entities);
 
     return result;
@@ -300,6 +338,10 @@ class References {
     _topLevelReferences.add(ref, entity);
   }
 
+  void addExtensionReference(String ref, Entity entity) {
+    _extensionReferences.add(ref, entity);
+  }
+
   Set<Entity> getLibraryReferences(String ref) {
     return _libraryReferences._references[ref]!;
   }
@@ -309,6 +351,9 @@ class References {
 
   Map<String, int> get sortedClassReferences =>
       _classReferences.sortedReferences;
+
+  Map<String, int> get sortedExtensionReferences =>
+      _extensionReferences.sortedReferences;
 
   Map<String, int> get sortedTopLevelReferences =>
       _topLevelReferences.sortedReferences;
@@ -321,6 +366,7 @@ class References {
   void combineWith(References references) {
     _libraryReferences.combineWith(references._libraryReferences);
     _classReferences.combineWith(references._classReferences);
+    _extensionReferences.combineWith(references._extensionReferences);
     _topLevelReferences.combineWith(references._topLevelReferences);
   }
 
@@ -328,6 +374,7 @@ class References {
     return {
       'library': _libraryReferences.toJson(),
       'class': _classReferences.toJson(),
+      'extension': _extensionReferences.toJson(),
       'topLevel': _topLevelReferences.toJson(),
     };
   }

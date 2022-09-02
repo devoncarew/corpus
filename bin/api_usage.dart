@@ -53,6 +53,8 @@ void main(List<String> args) async {
     return packageInfo.publishedDate.isAfter(dateOneYearAgo);
   }
 
+  // TODO: return a stream of packages - make network calls to populate package
+  // info lazily
   var packages = await pub.popularDependenciesOf(
     packageName,
     limit: packageLimit == null ? null : int.parse(packageLimit),
@@ -162,7 +164,6 @@ Future<ApiUsage> analyzePackage(
   driver.forceSkipInstall = true;
   driver.silent = true;
   driver.showErrors = false;
-  driver.resolveUnits = true;
   driver.excludedPaths = ['example'];
   driver.visitor = apiUsageCollector;
 
