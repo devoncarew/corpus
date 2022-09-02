@@ -5,17 +5,15 @@ import 'package:corpus/pub.dart';
 import 'package:test/scaffolding.dart';
 
 void main() {
-  group('PackageInfo', definePackageInfoTests);
-}
+  group('PackageInfo', () {
+    test('parse pub.dev results', () {
+      var packageInfo = PackageInfo.from(jsonDecode(_pubSampleData));
 
-void definePackageInfoTests() {
-  test('parse pub.dev results', () {
-    var packageInfo = PackageInfo.from(jsonDecode(_pubSampleData));
-
-    checkThat(packageInfo.name).equals('usage');
-    checkThat(packageInfo.version).equals('4.0.2');
-    checkThat(packageInfo.archiveUrl).isNotNull();
-    checkThat(packageInfo.publishedDate).isNotNull();
+      checkThat(packageInfo.name).equals('usage');
+      checkThat(packageInfo.version).equals('4.0.2');
+      checkThat(packageInfo.archiveUrl).isNotNull();
+      checkThat(packageInfo.publishedDate).isNotNull();
+    });
   });
 }
 
