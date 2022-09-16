@@ -30,6 +30,17 @@ class Pub {
     return result;
   }
 
+  Future<List<String>> dependenciesOf(
+    String packageName, {
+    int? limit,
+  }) async {
+    return await _packageNamesForSearch(
+      'dependency:$packageName',
+      limit: limit,
+      sort: 'top',
+    ).toList();
+  }
+
   Future<PackageInfo> getPackageInfo(String pkgName) async {
     final json = await _getJson(Uri.https('pub.dev', 'api/packages/$pkgName'));
 
@@ -65,6 +76,44 @@ class Pub {
           count++;
           yield packageInfo;
         }
+      }
+
+      if (map.containsKey('next')) {
+        page = page + 1;
+      } else {
+        break;
+      }
+
+      if (limit != null && count >= limit) {
+        break;
+      }
+    }
+  }
+
+  Stream<String> _packageNamesForSearch(
+    String query, {
+    int page = 1,
+    int? limit,
+    String? sort,
+  }) async* {
+    final uri = Uri.parse('https://pub.dev/api/search');
+
+    int count = 0;
+
+    for (;;) {
+      final targetUri = uri.replace(queryParameters: {
+        'q': query,
+        'page': page.toString(),
+        if (sort != null) 'sort': sort,
+      });
+
+      final map = await _getJson(targetUri);
+
+      for (var packageName in (map['packages'] as List)
+          .cast<Map<String, dynamic>>()
+          .map((e) => e['package'] as String?)) {
+        count++;
+        yield packageName!;
       }
 
       if (map.containsKey('next')) {
@@ -125,6 +174,12 @@ class PackageInfo {
   String get name => json['name'];
   String get description => _pubspec['description'];
 
+  String? get repository => _pubspec['repository'];
+  String? get homepage => _pubspec['homepage'];
+
+  String? get repo => repository ?? homepage;
+  String? get sdkConstraint => (_pubspec['environment'] ?? {})['sdk'];
+
   String get version => _latest['version'];
   String get archiveUrl => _latest['archive_url'];
   DateTime get publishedDate => DateTime.parse(_published);
@@ -136,4 +191,24 @@ class PackageInfo {
 
   @override
   String toString() => '$name: $version';
+
+  String? constraintFor(String name) {
+    if (_pubspec.containsKey('dependencies')) {
+      var constraint = _pubspec['dependencies'][name];
+      if (constraint != null) {
+        if (constraint is String && constraint.isEmpty) return 'any';
+        return constraint;
+      }
+    }
+
+    if (_pubspec.containsKey('dev_dependencies')) {
+      var constraint = _pubspec['dev_dependencies'][name];
+      if (constraint != null) {
+        if (constraint is String && constraint.isEmpty) return 'any';
+        return constraint;
+      }
+    }
+
+    return null;
+  }
 }
