@@ -5,6 +5,8 @@ import 'package:cli_util/cli_logging.dart';
 import 'package:corpus/packages.dart';
 import 'package:corpus/pub.dart';
 
+// TODO: show the 'discontinued' property
+
 void main(List<String> args) async {
   var argParser = createArgParser();
 
@@ -56,7 +58,7 @@ void main(List<String> args) async {
 
   for (var package in packages) {
     progress = log.progress('  $package');
-    var usage = await getPackageUsageInfo(await pub.getPackageInfo(package));
+    var usage = await getPackageUsageInfo(pub, package);
     progress.finish();
 
     if (excludeOld) {
@@ -86,13 +88,18 @@ void main(List<String> args) async {
 
 class PackageUsageInfo {
   final PackageInfo packageInfo;
+  final PackageOptions packageOptions;
+  final PackageScore packageScore;
 
-  PackageUsageInfo(this.packageInfo);
+  PackageUsageInfo(this.packageInfo, this.packageOptions, this.packageScore);
 }
 
-Future<PackageUsageInfo> getPackageUsageInfo(PackageInfo packageInfo) async {
-  // todo:
-  return PackageUsageInfo(packageInfo);
+Future<PackageUsageInfo> getPackageUsageInfo(Pub pub, String package) async {
+  var packageInfo = await pub.getPackageInfo(package);
+  var packageOptions = await pub.getPackageOptions(packageInfo.name);
+  var packageScore = await pub.getPackageScore(packageInfo.name);
+
+  return PackageUsageInfo(packageInfo, packageOptions, packageScore);
 }
 
 File generateCsvReport(
@@ -103,23 +110,23 @@ File generateCsvReport(
 
   buf.writeln('${targetPackage.name} ${targetPackage.version}');
   buf.writeln();
-  buf.writeln('Package,Version,Repo,Last Published (days),Last Commit (days),'
-      'SDK Constraint,Package Constraint');
-
-  // todo: pub popularity
-  // todo: pub score?
-  // todo: last commit date
+  buf.writeln('Package,Version,Last Published (days),Popularity,Quality Score,'
+      'SDK Constraint,Package Constraint,Constraint Type,Likes,Repo');
 
   for (var usage in usageInfos) {
     var package = usage.packageInfo;
+    var score = usage.packageScore;
     buf.writeln(
       '${package.name},'
       '${package.version},'
-      '${package.repo ?? ''},'
       '${daysOld(package.publishedDate)},'
-      'todo:,'
+      '${printDouble(score.popularityScore * 100)},'
+      '${printDouble(score.grantedPoints * 100 / score.maxPoints)},'
       '${package.sdkConstraint ?? ''},'
-      '${package.constraintFor(targetPackage.name) ?? ''}',
+      '${package.constraintFor(targetPackage.name) ?? ''},'
+      '${package.constraintType(targetPackage.name) ?? ''},'
+      '${score.likeCount},'
+      '${package.repo ?? ''}',
     );
   }
 
@@ -163,3 +170,5 @@ String daysOld(DateTime dateTime) {
   var duration = now.difference(dateTime);
   return '${duration.inDays}';
 }
+
+String printDouble(double value) => '${value.round()}';

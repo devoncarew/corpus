@@ -47,6 +47,18 @@ class Pub {
     return PackageInfo.from(json /*, options: options*/);
   }
 
+  Future<PackageOptions> getPackageOptions(String packageName) async {
+    final json = await _getJson(
+        Uri.https('pub.dev', 'api/packages/$packageName/options'));
+    return PackageOptions.from(json);
+  }
+
+  Future<PackageScore> getPackageScore(String packageName) async {
+    final json =
+        await _getJson(Uri.https('pub.dev', 'api/packages/$packageName/score'));
+    return PackageScore.from(json);
+  }
+
   Stream<PackageInfo> _packagesForSearch(
     String query, {
     int page = 1,
@@ -193,7 +205,7 @@ class PackageInfo {
   String toString() => '$name: $version';
 
   String? constraintFor(String name) {
-    if (_pubspec.containsKey('dependencies')) {
+    if (_pubspec['dependencies'] is Map) {
       var constraint = _pubspec['dependencies'][name];
       if (constraint != null) {
         if (constraint is String && constraint.isEmpty) return 'any';
@@ -201,7 +213,7 @@ class PackageInfo {
       }
     }
 
-    if (_pubspec.containsKey('dev_dependencies')) {
+    if (_pubspec['dev_dependencies'] is Map) {
       var constraint = _pubspec['dev_dependencies'][name];
       if (constraint != null) {
         if (constraint is String && constraint.isEmpty) return 'any';
@@ -211,4 +223,51 @@ class PackageInfo {
 
     return null;
   }
+
+  String? constraintType(String name) {
+    if (_pubspec['dependencies'] is Map) {
+      var deps = _pubspec['dependencies'] as Map;
+      if (deps.containsKey(name)) {
+        return 'regular';
+      }
+    }
+
+    if (_pubspec['dev_dependencies'] is Map) {
+      var deps = _pubspec['dev_dependencies'] as Map;
+      if (deps.containsKey(name)) {
+        return 'dev';
+      }
+    }
+
+    return null;
+  }
+}
+
+class PackageOptions {
+  // {"isDiscontinued":false,"replacedBy":null,"isUnlisted":true}
+
+  final Map<String, dynamic> json;
+
+  PackageOptions.from(this.json);
+
+  bool get isDiscontinued => json['isDiscontinued'];
+  String? get replacedBy => json['replacedBy'];
+  bool get isUnlisted => json['isUnlisted'];
+}
+
+class PackageScore {
+  // {
+  //   grantedPoints: 85, maxPoints: 140, likeCount: 0, popularityScore: 0.0,
+  //   tags: [sdk:dart, sdk:flutter, platform:android, platform:ios, ...],
+  //   lastUpdated: 2022-09-16T10:33:33.105325Z
+  // }
+
+  final Map<String, dynamic> json;
+
+  PackageScore.from(this.json);
+
+  int get grantedPoints => json['grantedPoints'];
+  int get maxPoints => json['maxPoints'];
+  int get likeCount => json['likeCount'];
+  double get popularityScore => json['popularityScore'];
 }
